@@ -1,4 +1,8 @@
 package e_commerce.service;
 
-public class AuthService {
+import e_commerce.response.SignupRequest;
+
+public interface AuthService {
+
+    String createUser(SignupRequest request);
 }

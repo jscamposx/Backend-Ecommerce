@@ -1,8 +1,12 @@
 package e_commerce.controller;
 
+import e_commerce.config.JwtProvider;
+import e_commerce.domain.USER_ROLE;
 import e_commerce.model.User;
 import e_commerce.repository.UserRepository;
+import e_commerce.response.AuthResponse;
 import e_commerce.response.SignupRequest;
+import e_commerce.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,14 +20,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final UserRepository userRepository;
+    private final AuthService authService;
 
     @PostMapping("/signup")
-    public ResponseEntity<User> createUserHabdler(@RequestBody SignupRequest req) {
-        User user = new User();
-        user.setEmail(req.getEmail());
-        user.setFullName(req.getFullname());
+    public ResponseEntity<AuthResponse> createUserHabdler(@RequestBody SignupRequest request) {
+        String jwt=authService.createUser(request);
+        AuthResponse response=new AuthResponse();
+        response.setJwtToken(jwt);
+        response.setMessage("Registration Successful");
+        response.setRole(USER_ROLE.ROLE_CUSTOMER);
 
-        User savedUser = userRepository.save(user);
-        return ResponseEntity.ok(savedUser);
+        return ResponseEntity.ok(response);
     }
 }
