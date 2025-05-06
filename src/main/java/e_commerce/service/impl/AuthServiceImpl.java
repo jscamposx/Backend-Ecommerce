@@ -4,10 +4,14 @@ import e_commerce.config.JwtProvider;
 import e_commerce.domain.USER_ROLE;
 import e_commerce.model.Cart;
 import e_commerce.model.User;
+import e_commerce.model.VerificationCode;
 import e_commerce.repository.CartRepository;
 import e_commerce.repository.UserRepository;
+import e_commerce.repository.VerificationCodeRepository;
 import e_commerce.response.SignupRequest;
 import e_commerce.service.AuthService;
+import e_commerce.service.EmailService;
+import e_commerce.utils.OtpUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -28,10 +32,51 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
     private final CartRepository cartRepository;
     private final JwtProvider jwtProvider;
-
+    private final VerificationCodeRepository verificationCodeRepository;
+    private final EmailService emailService;
 
     @Override
-    public String createUser(SignupRequest request) {
+    public void sentLoginOtp(String email) throws Exception {
+        String SIGNING_PREFIX="signin_";
+
+        if(email.startsWith(SIGNING_PREFIX)){
+            email=email.substring(SIGNING_PREFIX.length());
+            User user=userRepository.findByEmail(email);
+
+            if(user==null) {
+                throw new Exception("User not exist with provided email");
+            }
+        }
+        VerificationCode isExist=verificationCodeRepository.findByEmail(email);
+        if(isExist!=null) {
+            verificationCodeRepository.delete(isExist);
+        }
+
+        String otp = OtpUtil.generateOtp();
+
+        VerificationCode verificationCode=new VerificationCode();
+        verificationCode.setOtp(otp);
+        verificationCode.setEmail(email);
+        verificationCodeRepository.save(verificationCode);
+
+
+        String subject = "js campos login/signup otp";
+        String text = "your login/signup otp has been generated =" +otp;
+
+        emailService.sendVerificationEmail(email,otp,subject,text);
+
+
+    }
+
+    @Override
+    public String createUser(SignupRequest request) throws Exception {
+
+
+        VerificationCode verificationCode = verificationCodeRepository.findByEmail(request.getEmail());
+
+        if(verificationCode == null || !verificationCode.getOtp().equals(request.getOtp())) {
+            throw new Exception();
+        }
 
         User user = userRepository.findByEmail(request.getEmail());
         if(user == null) {
